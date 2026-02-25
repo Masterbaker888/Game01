@@ -1,55 +1,141 @@
 using UnityEngine;
-// We need this namespace to use the new Unity Input System
 using UnityEngine.InputSystem; 
 
-// This line forces Unity to automatically add a CharacterController to the player if it's missing
 [RequireComponent(typeof(CharacterController))]
-public class Player1Movement : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
-    #region Input Actions
-    [Header("Input System References")]
-    [Tooltip("Drag the Move input action here (Vector2)")]
-    [SerializeField] private InputActionReference moveAction;
-    
-    [Tooltip("Drag the Jump input action here (Button)")]
-    [SerializeField] private InputActionReference jumpAction;
-    
-    [Tooltip("Drag the Sprint input action here (Button)")]
-    [SerializeField] private InputActionReference sprintAction;
-    
-    [Tooltip("Drag the Walk Faster input action here (Button)")]
-    [SerializeField] private InputActionReference fastWalkAction;
-    
-    [Tooltip("Drag the Crouch input action here (Button)")]
-    [SerializeField] private InputActionReference crouchAction;
-    #endregion
-
     #region Movement Parameters
     [Header("Movement Speeds")]
-    [Tooltip("Base speed when walking normally.")]
-    [SerializeField] private float walkSpeed = 5f;
+    [SerializeField] [Tooltip("Base speed when walking normally.")]
+    private float walkSpeed = 5f;
     
-    [Tooltip("Speed when the Fast Walk button is held.")]
-    [SerializeField] private float fastWalkSpeed = 8f;
-    
-    [Tooltip("Speed when the Sprint button is held.")]
-    [SerializeField] private float sprintSpeed = 12f;
-    
-    [Tooltip("Speed when crouching.")]
-    [SerializeField] private float crouchSpeed = 2.5f;
+    [SerializeField] [Tooltip("Speed when the Sprint button is held.")]
+    private float sprintSpeed = 10f;
+
+    [SerializeField] [Tooltip("How fast the character rotates.")]
+    private float rotationSpeed = 700f;
 
     [Header("Jumping & Gravity")]
-    [Tooltip("How high the player can jump.")]
-    [SerializeField] private float jumpHeight = 2f;
+    [SerializeField] [Tooltip("How high the player can jump.")]
+    private float jumpHeight = 2.5f;
     
-    [Tooltip("The strength of gravity pulling the player down.")]
-    [SerializeField] private float gravity = -9.81f;
+    [SerializeField] [Tooltip("Gravity strength.")]
+    private float gravity = -19.62f;
     
-    [Tooltip("How long (in seconds) the player can still jump after walking off a ledge.")]
-    [SerializeField] private float coyoteTime = 0.2f;
-    
-    [Tooltip("Maximum number of jumps allowed (2 = Double Jump).")]
-    [SerializeField] private int maxJumps = 2;
+    [SerializeField] [Tooltip("Buffer time (seconds) you can still jump after falling off a ledge.")]
+    private float coyoteTime = 0.2f;
+    #endregion
 
-    [Header("Crouching Setup")]
-    [Tooltip("The height of the player's collider when crouching
+    #region Detection Settings
+    [Header("Ground Detection")]
+    [SerializeField] [Tooltip("Set this to the 'Ground' layer in the inspector.")]
+    private LayerMask groundLayer;
+    
+    [SerializeField] [Tooltip("How far down from the center to look for the floor.")]
+    private float groundCheckDistance = 1.1f; 
+    #endregion
+
+    private CharacterController controller;
+    private Vector3 velocity;
+    private Vector2 moveInput;
+    private bool isSprinting;
+    private bool isGrounded;
+    private float coyoteTimeCounter;
+    private bool canDoubleJump;
+
+    void Start()
+    {
+        controller = GetComponent<CharacterController>();
+    }
+
+    void Update()
+    {
+        CheckGround();
+        MovePlayer();
+        ApplyGravity();
+    }
+
+    #region Input Methods
+    public void OnMove(InputValue value)
+    {
+        moveInput = value.Get<Vector2>();
+    }
+
+    public void OnSprint(InputValue value)
+    {
+        isSprinting = value.isPressed;
+        // X-RAY VISION: This will print to the console when you press/release Sprint
+        Debug.Log("Sprint button is pressed: " + isSprinting); 
+    }
+
+    public void OnJump(InputValue value)
+    {
+        // X-RAY VISION: This will print every time you press the jump button
+        Debug.Log("Jump button was pressed! Am I grounded? " + isGrounded); 
+
+        if (value.isPressed)
+        {
+            if (coyoteTimeCounter > 0)
+            {
+                PerformJump();
+                canDoubleJump = true;
+                Debug.Log("Performed Normal Jump!");
+            }
+            else if (canDoubleJump)
+            {
+                PerformJump();
+                canDoubleJump = false;
+                Debug.Log("Performed Double Jump!");
+            }
+        }
+    }
+    #endregion
+
+    #region Core Logic
+    private void CheckGround()
+    {
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
+
+        // X-RAY VISION: Draws a red line in your Scene view so you can see the ground check
+        Debug.DrawRay(transform.position, Vector3.down * groundCheckDistance, Color.red);
+
+        if (isGrounded)
+        {
+            coyoteTimeCounter = coyoteTime;
+            if (velocity.y < 0) 
+            {
+                velocity.y = -2f; 
+            }
+        }
+        else
+        {
+            coyoteTimeCounter -= Time.deltaTime; 
+        }
+    }
+
+    private void MovePlayer()
+    {
+        Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
+        float currentSpeed = isSprinting ? sprintSpeed : walkSpeed;
+        controller.Move(move * currentSpeed * Time.deltaTime);
+
+        if (move != Vector3.zero)
+        {
+            Quaternion targetRot = Quaternion.LookRotation(move);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, rotationSpeed * Time.deltaTime);
+        }
+    }
+
+    private void ApplyGravity()
+    {
+        velocity.y += gravity * Time.deltaTime;
+        controller.Move(velocity * Time.deltaTime);
+    }
+
+    private void PerformJump()
+    {
+        velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        coyoteTimeCounter = 0; 
+    }
+    #endregion
+}
