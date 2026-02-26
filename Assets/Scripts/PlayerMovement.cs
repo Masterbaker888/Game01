@@ -4,7 +4,6 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
-    #region Movement Parameters
     [Header("Movement Speeds")]
     [SerializeField] [Tooltip("Base speed when walking normally.")]
     private float walkSpeed = 5f;
@@ -22,18 +21,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] [Tooltip("Gravity strength.")]
     private float gravity = -19.62f;
     
-    [SerializeField] [Tooltip("Buffer time (seconds) you can still jump after falling off a ledge.")]
+    [SerializeField] [Tooltip("Buffer time (seconds) you can jump after falling off a ledge.")]
     private float coyoteTime = 0.2f;
-    #endregion
-
-    #region Detection Settings
-    [Header("Ground Detection")]
-    [SerializeField] [Tooltip("Set this to the 'Ground' layer in the inspector.")]
-    private LayerMask groundLayer;
-    
-    [SerializeField] [Tooltip("How far down from the center to look for the floor.")]
-    private float groundCheckDistance = 1.1f; 
-    #endregion
 
     private CharacterController controller;
     private Vector3 velocity;
@@ -43,9 +32,18 @@ public class PlayerMovement : MonoBehaviour
     private float coyoteTimeCounter;
     private bool canDoubleJump;
 
+    // NEW: A variable to store our Main Camera
+    private Transform cameraTransform;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        
+        // Automatically find the Main Camera in the scene so we don't have to drag and drop it!
+        if (Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+        }
     }
 
     void Update()
@@ -64,28 +62,21 @@ public class PlayerMovement : MonoBehaviour
     public void OnSprint(InputValue value)
     {
         isSprinting = value.isPressed;
-        // X-RAY VISION: This will print to the console when you press/release Sprint
-        Debug.Log("Sprint button is pressed: " + isSprinting); 
     }
 
     public void OnJump(InputValue value)
     {
-        // X-RAY VISION: This will print every time you press the jump button
-        Debug.Log("Jump button was pressed! Am I grounded? " + isGrounded); 
-
         if (value.isPressed)
         {
             if (coyoteTimeCounter > 0)
             {
                 PerformJump();
                 canDoubleJump = true;
-                Debug.Log("Performed Normal Jump!");
             }
             else if (canDoubleJump)
             {
                 PerformJump();
                 canDoubleJump = false;
-                Debug.Log("Performed Double Jump!");
             }
         }
     }
@@ -94,10 +85,7 @@ public class PlayerMovement : MonoBehaviour
     #region Core Logic
     private void CheckGround()
     {
-        isGrounded = Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
-
-        // X-RAY VISION: Draws a red line in your Scene view so you can see the ground check
-        Debug.DrawRay(transform.position, Vector3.down * groundCheckDistance, Color.red);
+        isGrounded = controller.isGrounded;
 
         if (isGrounded)
         {
@@ -115,10 +103,27 @@ public class PlayerMovement : MonoBehaviour
 
     private void MovePlayer()
     {
-        Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
+        // If we don't have a camera, stop right here
+        if (cameraTransform == null) return;
+
+        // 1. Get the exact directions the camera is facing
+        Vector3 forward = cameraTransform.forward;
+        Vector3 right = cameraTransform.right;
+
+        // 2. Flatten those directions so looking down doesn't push the player into the floor
+        forward.y = 0f;
+        right.y = 0f;
+        forward.Normalize();
+        right.Normalize();
+
+        // 3. Calculate our new movement direction relative to the camera
+        Vector3 move = (forward * moveInput.y) + (right * moveInput.x);
+
+        // 4. Move the player
         float currentSpeed = isSprinting ? sprintSpeed : walkSpeed;
         controller.Move(move * currentSpeed * Time.deltaTime);
 
+        // 5. Rotate the player to instantly face the new walking direction
         if (move != Vector3.zero)
         {
             Quaternion targetRot = Quaternion.LookRotation(move);
