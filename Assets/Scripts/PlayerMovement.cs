@@ -5,24 +5,14 @@ using UnityEngine.InputSystem;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Speeds")]
-    [SerializeField] [Tooltip("Base speed when walking normally.")]
-    private float walkSpeed = 5f;
-    
-    [SerializeField] [Tooltip("Speed when the Sprint button is held.")]
-    private float sprintSpeed = 10f;
-
-    [SerializeField] [Tooltip("How fast the character rotates.")]
-    private float rotationSpeed = 700f;
+    [SerializeField] private float walkSpeed = 5f;
+    [SerializeField] private float sprintSpeed = 10f;
+    [SerializeField] private float rotationSpeed = 700f;
 
     [Header("Jumping & Gravity")]
-    [SerializeField] [Tooltip("How high the player can jump.")]
-    private float jumpHeight = 2.5f;
-    
-    [SerializeField] [Tooltip("Gravity strength.")]
-    private float gravity = -19.62f;
-    
-    [SerializeField] [Tooltip("Buffer time (seconds) you can jump after falling off a ledge.")]
-    private float coyoteTime = 0.2f;
+    [SerializeField] private float jumpHeight = 2.5f;
+    [SerializeField] private float gravity = -19.62f;
+    [SerializeField] private float coyoteTime = 0.2f;
 
     private CharacterController controller;
     private Vector3 velocity;
@@ -32,18 +22,22 @@ public class PlayerMovement : MonoBehaviour
     private float coyoteTimeCounter;
     private bool canDoubleJump;
 
-    // NEW: A variable to store our Main Camera
     private Transform cameraTransform;
+    
+    // NEW: We need a brain connection!
+    private Animator animator;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
         
-        // Automatically find the Main Camera in the scene so we don't have to drag and drop it!
         if (Camera.main != null)
         {
             cameraTransform = Camera.main.transform;
         }
+
+        // NEW: This looks inside Player1 and finds the Animator on your 3D model
+        animator = GetComponentInChildren<Animator>();
     }
 
     void Update()
@@ -51,6 +45,7 @@ public class PlayerMovement : MonoBehaviour
         CheckGround();
         MovePlayer();
         ApplyGravity();
+        UpdateAnimations(); // NEW: Run the animation math every frame
     }
 
     #region Input Methods
@@ -103,27 +98,20 @@ public class PlayerMovement : MonoBehaviour
 
     private void MovePlayer()
     {
-        // If we don't have a camera, stop right here
         if (cameraTransform == null) return;
 
-        // 1. Get the exact directions the camera is facing
         Vector3 forward = cameraTransform.forward;
         Vector3 right = cameraTransform.right;
 
-        // 2. Flatten those directions so looking down doesn't push the player into the floor
         forward.y = 0f;
         right.y = 0f;
         forward.Normalize();
         right.Normalize();
 
-        // 3. Calculate our new movement direction relative to the camera
         Vector3 move = (forward * moveInput.y) + (right * moveInput.x);
-
-        // 4. Move the player
         float currentSpeed = isSprinting ? sprintSpeed : walkSpeed;
         controller.Move(move * currentSpeed * Time.deltaTime);
 
-        // 5. Rotate the player to instantly face the new walking direction
         if (move != Vector3.zero)
         {
             Quaternion targetRot = Quaternion.LookRotation(move);
@@ -141,6 +129,20 @@ public class PlayerMovement : MonoBehaviour
     {
         velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         coyoteTimeCounter = 0; 
+    }
+
+    // NEW: The Animation Logic!
+    private void UpdateAnimations()
+    {
+        // If we don't have an animator, skip this
+        if (animator == null) return;
+
+        // Calculate how fast the player is moving horizontally (ignoring falling speed)
+        float currentSpeed = new Vector3(controller.velocity.x, 0, controller.velocity.z).magnitude;
+
+        // Send those numbers to the Animator parameters you made!
+        animator.SetFloat("Speed", currentSpeed);
+        animator.SetBool("isGrounded", isGrounded);
     }
     #endregion
 }
