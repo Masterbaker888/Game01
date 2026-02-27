@@ -142,7 +142,7 @@ public class PlayerMovement : MonoBehaviour
 
         // Send those numbers to the Animator parameters you made!
         animator.SetFloat("Speed", currentSpeed);
-        animator.SetBool("isGrounded", isGrounded);
-    }
-    #endregion
+      animator.SetBool("isGrounded", isGrounded);
+}
+#endregion
 }

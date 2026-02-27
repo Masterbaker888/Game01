@@ -465,14 +465,11 @@ PrefabInstance:
       objectReference: {fileID: 9100000, guid: 48c9ad2367e1e400686860dfc75a46c9, type: 2}
     - target: {fileID: 5866666021909216657, guid: d3cb98de1286346ada4bec93a66a842f, type: 3}
       propertyPath: m_WarningMessage
-      value: "\nBinding warning: Some generic clip(s) animate transforms that are
-        already bound by a Humanoid avatar. These transforms can only be changed
-        by Humanoid clips.\n\tTransform 'mixamorig:Hips'\n\tTransform 'mixamorig:LeftFoot'\n\tTransform
-        'mixamorig:LeftHandThumb2'\n\tTransform 'mixamorig:LeftHandIndex1'\n\tTransform
-        'mixamorig:LeftHandPinky2'\n\tTransform 'mixamorig:RightHandRing2'\n\tTransform
-        'mixamorig:Spine1'\n\tTransform 'mixamorig:LeftToeBase'\n\tTransform 'mixamorig:LeftHandThumb3'\n\tTransform
-        'mixamorig:RightArm'\n\tand more ...\n\tFrom animation clip 'mixamo.com'\n\tFrom
-        animation clip 'mixamo.com'\n\tFrom animation clip 'mixamo.com'"
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: d3cb98de1286346ada4bec93a66a842f, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7078722787440015773, guid: d3cb98de1286346ada4bec93a66a842f, type: 3}
       propertyPath: m_LocalRotation.w
