@@ -941,6 +941,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!95 &1488356702 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: d3cb98de1286346ada4bec93a66a842f, type: 3}
+  m_PrefabInstance: {fileID: 534050969}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1868654256
 GameObject:
   m_ObjectHideFlags: 0
@@ -981,6 +986,7 @@ MonoBehaviour:
   jumpHeight: 2
   gravity: -19.62
   coyoteTime: 0.2
+  animator: {fileID: 1488356702}
 --- !u!114 &1868654258
 MonoBehaviour:
   m_ObjectHideFlags: 0

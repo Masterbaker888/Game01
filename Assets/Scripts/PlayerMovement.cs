@@ -25,7 +25,7 @@ public class PlayerMovement : MonoBehaviour
     private Transform cameraTransform;
     
     // NEW: We need a brain connection!
-    private Animator animator;
+    public Animator animator;
 
     void Start()
     {
@@ -37,7 +37,6 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // NEW: This looks inside Player1 and finds the Animator on your 3D model
-        animator = GetComponentInChildren<Animator>();
     }
 
     void Update()
