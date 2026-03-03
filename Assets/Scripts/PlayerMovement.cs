@@ -39,12 +39,17 @@ public class PlayerMovement : MonoBehaviour
         // NEW: This looks inside Player1 and finds the Animator on your 3D model
     }
 
-    void Update()
+  void Update()
     {
         CheckGround();
         MovePlayer();
         ApplyGravity();
-        UpdateAnimations(); // NEW: Run the animation math every frame
+        
+        // Calculate our speed based on the keyboard
+        float currentSpeed = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")).magnitude * (Input.GetKey(KeyCode.LeftShift) ? 10f : 5f);
+        
+        // Send that speed to the Animator!
+        animator.SetFloat("Speed", currentSpeed);    
     }
 
     #region Input Methods
@@ -77,9 +82,12 @@ public class PlayerMovement : MonoBehaviour
     #endregion
 
     #region Core Logic
-    private void CheckGround()
+  private void CheckGround()
     {
         isGrounded = controller.isGrounded;
+
+        // NEW: Tell the Animator whether we are on the ground or not!
+        animator.SetBool("isGrounded", isGrounded);
 
         if (isGrounded)
         {
