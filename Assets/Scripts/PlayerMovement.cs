@@ -1,155 +1,67 @@
 using UnityEngine;
-using UnityEngine.InputSystem; 
 
-[RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Movement Speeds")]
-    [SerializeField] private float walkSpeed = 5f;
-    [SerializeField] private float sprintSpeed = 10f;
-    [SerializeField] private float rotationSpeed = 700f;
-
-    [Header("Jumping & Gravity")]
-    [SerializeField] private float jumpHeight = 2.5f;
-    [SerializeField] private float gravity = -19.62f;
-    [SerializeField] private float coyoteTime = 0.2f;
-
-    private CharacterController controller;
-    private Vector3 velocity;
-    private Vector2 moveInput;
-    private bool isSprinting;
-    private bool isGrounded;
-    private float coyoteTimeCounter;
-    private bool canDoubleJump;
-
-    private Transform cameraTransform;
-    
-    // NEW: We need a brain connection!
     public Animator animator;
+    public CharacterController controller;
+    public Transform mainCamera;
 
-    void Start()
+    public float speed = 5f;
+    public float jumpHeight = 1.5f;
+    public float gravity = -15f; 
+
+    private Vector3 velocity;
+    private string currentState = "Idle";
+
+    void Update()
     {
-        controller = GetComponent<CharacterController>();
-        
-        if (Camera.main != null)
+        // 1. Are we touching the floor?
+        bool isGrounded = controller.isGrounded;
+        if (isGrounded && velocity.y < 0)
         {
-            cameraTransform = Camera.main.transform;
+            velocity.y = -2f; // Keeps her snapped to the ground
         }
 
-        // NEW: This looks inside Player1 and finds the Animator on your 3D model
-    }
+        // 2. Read WASD keys
+        float horizontal = Input.GetAxisRaw("Horizontal");
+        float vertical = Input.GetAxisRaw("Vertical");
+        Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
 
-  void Update()
-    {
-        CheckGround();
-        MovePlayer();
-        ApplyGravity();
-        
-        // Calculate our speed based on the keyboard
-        float currentSpeed = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")).magnitude * (Input.GetKey(KeyCode.LeftShift) ? 10f : 5f);
-        
-        // Send that speed to the Animator!
-        animator.SetFloat("Speed", currentSpeed);    
-    }
-
-    #region Input Methods
-    public void OnMove(InputValue value)
-    {
-        moveInput = value.Get<Vector2>();
-    }
-
-    public void OnSprint(InputValue value)
-    {
-        isSprinting = value.isPressed;
-    }
-
-    public void OnJump(InputValue value)
-    {
-        if (value.isPressed)
+        // 3. Running and Idling
+        if (direction.magnitude >= 0.1f)
         {
-            if (coyoteTimeCounter > 0)
-            {
-                PerformJump();
-                canDoubleJump = true;
-            }
-            else if (canDoubleJump)
-            {
-                PerformJump();
-                canDoubleJump = false;
-            }
-        }
-    }
-    #endregion
+            float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
+            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
 
-    #region Core Logic
-  private void CheckGround()
-    {
-        isGrounded = controller.isGrounded;
+            controller.Move(moveDir.normalized * speed * Time.deltaTime);
 
-        // NEW: Tell the Animator whether we are on the ground or not!
-        animator.SetBool("isGrounded", isGrounded);
-
-        if (isGrounded)
-        {
-            coyoteTimeCounter = coyoteTime;
-            if (velocity.y < 0) 
-            {
-                velocity.y = -2f; 
-            }
+            // Using your exact box name!
+            if (isGrounded) ChangeAnimationState("Running");
         }
         else
         {
-            coyoteTimeCounter -= Time.deltaTime; 
+            if (isGrounded) ChangeAnimationState("Idle");
         }
-    }
 
-    private void MovePlayer()
-    {
-        if (cameraTransform == null) return;
-
-        Vector3 forward = cameraTransform.forward;
-        Vector3 right = cameraTransform.right;
-
-        forward.y = 0f;
-        right.y = 0f;
-        forward.Normalize();
-        right.Normalize();
-
-        Vector3 move = (forward * moveInput.y) + (right * moveInput.x);
-        float currentSpeed = isSprinting ? sprintSpeed : walkSpeed;
-        controller.Move(move * currentSpeed * Time.deltaTime);
-
-        if (move != Vector3.zero)
+        // 4. Jumping (Press Spacebar)
+        if (Input.GetButtonDown("Jump") && isGrounded)
         {
-            Quaternion targetRot = Quaternion.LookRotation(move);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, rotationSpeed * Time.deltaTime);
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            
+            // Using your exact box name!
+            ChangeAnimationState("Jumping");
         }
-    }
 
-    private void ApplyGravity()
-    {
+        // 5. Apply Gravity
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
     }
 
-    private void PerformJump()
+    // Direct State Switcher
+    void ChangeAnimationState(string newState)
     {
-        velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        coyoteTimeCounter = 0; 
+        if (currentState == newState) return; 
+        animator.CrossFade(newState, 0.1f);
+        currentState = newState;
     }
-
-    // NEW: The Animation Logic!
-    private void UpdateAnimations()
-    {
-        // If we don't have an animator, skip this
-        if (animator == null) return;
-
-        // Calculate how fast the player is moving horizontally (ignoring falling speed)
-        float currentSpeed = new Vector3(controller.velocity.x, 0, controller.velocity.z).magnitude;
-
-        // Send those numbers to the Animator parameters you made!
-        animator.SetFloat("Speed", currentSpeed);
-      animator.SetBool("isGrounded", isGrounded);
-}
-#endregion
 }
