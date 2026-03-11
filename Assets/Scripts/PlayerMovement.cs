@@ -27,28 +27,36 @@ public class PlayerMovement : MonoBehaviour
         float vertical = Input.GetAxisRaw("Vertical");
         Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
 
-        // 3. Running and Idling
+   // 3. Running and Idling
         if (direction.magnitude >= 0.1f)
         {
+            // Move based on where the camera is looking
             float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
-            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
+            
+            // ---> ADD THIS LINE: Makes her physically rotate to face the direction she is running <---
+            transform.rotation = Quaternion.Euler(0f, targetAngle, 0f);
 
+            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
             controller.Move(moveDir.normalized * speed * Time.deltaTime);
 
-            // Using your exact box name!
-            if (isGrounded) ChangeAnimationState("Running");
+            if (isGrounded && velocity.y <= 0) 
+            {
+                ChangeAnimationState("Running");
+            }
         }
         else
         {
-            if (isGrounded) ChangeAnimationState("Idle");
+            // ONLY idle if we are on the ground AND not currently flying upwards from a jump
+            if (isGrounded && velocity.y <= 0) 
+            {
+                ChangeAnimationState("Idle");
+            }
         }
 
         // 4. Jumping (Press Spacebar)
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            
-            // Using your exact box name!
             ChangeAnimationState("Jumping");
         }
 
