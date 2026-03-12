@@ -1,63 +1,77 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    public Animator animator;
+    [Header("References")]
     public CharacterController controller;
+    public Animator animator;
     public Transform mainCamera;
 
-    public float speed = 5f;
-    public float jumpHeight = 1.5f;
-    public float gravity = -15f; 
+    [Header("Movement Settings")]
+    public float speed = 6f;
+    public float turnSmoothTime = 0.1f;
+    float turnSmoothVelocity;
 
-    private Vector3 velocity;
-    private string currentState = "Idle";
+    [Header("Gravity & Jumping")]
+    public float gravity = -9.81f;
+    public float jumpHeight = 1.5f;
+    Vector3 velocity;
+    bool isGrounded;
+
+    // Used to track the current animation so it doesn't stutter
+    private string currentState;
 
     void Update()
     {
-        // 1. Are we touching the floor?
-        bool isGrounded = controller.isGrounded;
+        // 1. Check if grounded
+        isGrounded = controller.isGrounded;
+        Debug.Log("Am I on the ground? " + isGrounded); // <--- ADD THIS LINE
         if (isGrounded && velocity.y < 0)
         {
-            velocity.y = -2f; // Keeps her snapped to the ground
+            velocity.y = -2f; // Helps keep the character snapped perfectly to the floor
         }
 
-        // 2. Read WASD keys
+        // 2. Get Input
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
         Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
 
-   // 3. Running and Idling
+        // 3. Movement and Rotation (Fortnite Style)
         if (direction.magnitude >= 0.1f)
         {
-            // Move based on where the camera is looking
-            float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + mainCamera.eulerAngles.y;
-            
-            // ---> ADD THIS LINE: Makes her physically rotate to face the direction she is running <---
-            transform.rotation = Quaternion.Euler(0f, targetAngle, 0f);
+            // Always face the exact same direction the camera is looking
+            float targetAngle = mainCamera.eulerAngles.y;
+            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
+            transform.rotation = Quaternion.Euler(0f, angle, 0f);
 
-            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
+            // Move forward, backward, left, or right based on the keys pressed
+            Vector3 moveDir = transform.right * direction.x + transform.forward * direction.z;
             controller.Move(moveDir.normalized * speed * Time.deltaTime);
 
-            if (isGrounded && velocity.y <= 0) 
+            if (isGrounded) 
             {
                 ChangeAnimationState("Running");
             }
         }
         else
         {
-            // ONLY idle if we are on the ground AND not currently flying upwards from a jump
-            if (isGrounded && velocity.y <= 0) 
+            if (isGrounded) 
             {
+                // Just in case we stop moving but still want to face the camera direction
+                float targetAngle = mainCamera.eulerAngles.y;
+                float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
+                transform.rotation = Quaternion.Euler(0f, angle, 0f);
+                
                 ChangeAnimationState("Idle");
             }
         }
 
-        // 4. Jumping (Press Spacebar)
+        // 4. Jumping
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            ChangeAnimationState("Jumping");
         }
 
         // 5. Apply Gravity
@@ -65,11 +79,12 @@ public class PlayerMovement : MonoBehaviour
         controller.Move(velocity * Time.deltaTime);
     }
 
-    // Direct State Switcher
-    void ChangeAnimationState(string newState)
+    // Helper function to play animations without making them jitter
+    public void ChangeAnimationState(string newState)
     {
-        if (currentState == newState) return; 
-        animator.CrossFade(newState, 0.1f);
+        if (currentState == newState) return;
+        
+        animator.Play(newState);
         currentState = newState;
     }
 }
