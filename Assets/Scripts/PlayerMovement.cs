@@ -22,14 +22,14 @@ public class PlayerMovement : MonoBehaviour
 
     void Start()
     {
-        // Lock the cursor to the center of the screen and hide it when the game starts!
+        // Lock the cursor to the center of the screen and hide it when the game starts
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
     void Update()
     {
-        // --- NEW: SHIFT LOCK TOGGLE ---
+        // --- SHIFT LOCK TOGGLE ---
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
             if (Cursor.lockState == CursorLockMode.Locked)
@@ -46,7 +46,7 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // 1. Ground Check
+        // 1. Ground Check (Built-in Character Controller method)
         isGrounded = controller.isGrounded;
 
         if (isGrounded && velocity.y < 0)
@@ -89,5 +89,8 @@ public class PlayerMovement : MonoBehaviour
         // 5. Animation
         animator.SetFloat("VelocityX", horizontal);
         animator.SetFloat("VelocityZ", vertical);
+        
+        // --- NEW: Tell the animator if we are on the ground or in the air! ---
+        animator.SetBool("IsGrounded", isGrounded);
     }
 }
